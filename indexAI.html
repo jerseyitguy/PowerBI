@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Power BI Learning Pathway</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- 
+        Chosen Palette: Amber & Slate
+        Application Structure Plan: The SPA is designed as a "Learning Pathway" with a two-column layout. A sticky left sidebar provides persistent, non-linear navigation through the course chapters, highlighting the active section on scroll. The main content area on the right uses a card-based design to break down the dense lesson plan into logical, digestible chunks (objectives, concepts, examples). This structure enhances usability for a learner by making the content easily scannable and accessible, prioritizing findability over a simple, long-scrolling document. An introductory chart provides a high-level visual summary of the course structure.
+        Visualization & Content Choices: 
+        - Course Overview: Donut Chart (Chart.js) to visually summarize the main course modules (Power Query, Data Modeling, DAX, Dashboarding). Goal: Provide an engaging, high-level map of the learning journey. Interaction: Hover to see module names. Justification: More engaging than a text list and sets the stage for the detailed content.
+        - Star Schema Diagram: Structured HTML/CSS diagram to explain the relationship between Fact and Dimension tables. Goal: Visually represent a core data modeling concept. Interaction: None. Justification: A diagram is the clearest way to explain this structural concept without resorting to external images or unsupported libraries.
+        - DAX vs. M Language Comparison: A side-by-side two-column layout using HTML/Tailwind cards. Goal: Clearly compare and contrast two fundamental technologies. Interaction: None. Justification: Direct comparison in a clean layout is optimal for clarifying differences.
+        - Code Snippets: Styled `<pre><code>` blocks with a copy-to-clipboard button. Goal: Present formulas clearly and make them reusable. Interaction: Click to copy. Justification: Standard and effective presentation for code.
+        - Gemini API Features: Buttons to trigger LLM calls for simplified explanations ("Explain Like I'm 5") and to generate practical use-cases ("Generate Practice Scenario"). Goal: Enhance learning through AI-powered clarification and application-focused challenges. Interaction: Click to generate text. Justification: Adds a dynamic, personalized learning layer that adapts to user needs for deeper understanding and practice.
+        CONFIRMATION: NO SVG graphics used. NO Mermaid JS used.
+    -->
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .active-nav { background-color: #f59e0b; color: white; }
+        .code-block {
+            background-color: #f3f4f6;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            position: relative;
+            font-family: 'Courier New', Courier, monospace;
+            color: #1f2937;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .copy-btn {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background-color: #d1d5db;
+            color: #1f2937;
+            border: none;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            font-size: 0.75rem;
+            transition: background-color 0.2s;
+        }
+        .copy-btn:hover { background-color: #9ca3af; }
+        .gemini-btn {
+            background-color: #fde68a;
+            color: #78350f;
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            transition: background-color 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .gemini-btn:hover { background-color: #fcd34d; }
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s, visibility 0.3s;
+        }
+        .modal-overlay.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+        .modal-content {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 0.75rem;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            transform: scale(0.95);
+            transition: transform 0.3s;
+        }
+        .modal-overlay.visible .modal-content {
+            transform: scale(1);
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #f59e0b;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+    <div class="flex min-h-screen">
+        <!-- Sidebar Navigation -->
+        <aside class="w-64 bg-white/80 backdrop-blur-lg border-r border-slate-200 p-6 sticky top-0 h-screen overflow-y-auto hidden lg:block">
+            <h2 class="text-xl font-bold text-slate-900 mb-6">Course Chapters</h2>
+            <nav id="sidebar-nav">
+                <ul class="space-y-2">
+                    <!-- Nav items will be injected by JS -->
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 p-4 sm:p-6 lg:p-10">
+            <div class="max-w-4xl mx-auto">
+                <header class="mb-10">
+                    <h1 class="text-4xl font-bold text-slate-900 mb-2">Interactive Power BI Learning Pathway</h1>
+                    <p class="text-lg text-slate-600">An easy-to-follow guide from data import to dashboard deployment, now with AI-powered learning tools.</p>
+                </header>
+                
+                <section class="mb-12">
+                     <div class="bg-white p-6 rounded-xl shadow-md">
+                        <h3 class="text-xl font-semibold text-slate-800 mb-4">Course Structure Overview</h3>
+                        <p class="text-slate-600 mb-4">This course is broken down into four key modules, starting with data transformation in Power Query, moving to data modeling and calculations with DAX, and culminating in building and sharing your final dashboard.</p>
+                        <div class="chart-container relative mx-auto h-64 md:h-80 max-w-md">
+                            <canvas id="courseOverviewChart"></canvas>
+                        </div>
+                    </div>
+                </section>
+
+                <div id="content-sections" class="space-y-12">
+                    <!-- Chapter 1: Power Query Intro -->
+                    <section id="chapter-1" class="space-y-6">
+                        <h2 class="text-3xl font-bold text-slate-900 border-b pb-2">Chapter 1: Power Query Intro</h2>
+                        <div class="bg-white p-6 rounded-xl shadow-md">
+                            <div class="flex justify-between items-start">
+                                <h3 class="text-xl font-semibold text-slate-800">Objective & Key Concepts</h3>
+                                <button class="gemini-btn explain-btn text-xs">✨ Explain It</button>
+                            </div>
+                            <div class="concept-text">
+                                <p class="mt-2 text-slate-600">To understand the fundamental concepts of Power Query as an ETL (Extract, Transform, Load) tool and learn how to import data from various sources like web pages and folders.</p>
+                                <ul class="mt-4 list-disc list-inside text-slate-600 space-y-1">
+                                    <li><b>ETL:</b> The process of Extracting data from a source, Transforming (cleaning) it, and Loading it into a destination like Power BI.</li>
+                                    <li><b>Data Sources:</b> Where your data comes from (e.g., Excel files, databases, web pages).</li>
+                                    <li><b>Queries:</b> Instructions that tell Power Query how to connect to, transform, and load data.</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="mt-6">
+                            <button class="gemini-btn scenario-btn w-full justify-center">✨ Generate a Practice Scenario</button>
+                            <div class="scenario-output mt-4"></div>
+                        </div>
+                    </section>
+                    
+                    <!-- Chapter 2: Power Query Editor -->
+                    <section id="chapter-2" class="space-y-6">
+                        <h2 class="text-3xl font-bold text-slate-900 border-b pb-2">Chapter 2: Power Query Editor</h2>
+                        <div class="bg-white p-6 rounded-xl shadow-md">
+                            <div class="flex justify-between items-start">
+                                <h3 class="text-xl font-semibold text-slate-800">Objective & Key Concepts</h3>
+                                <button class="gemini-btn explain-btn text-xs">✨ Explain It</button>
+                            </div>
+                            <div class="concept-text">
+                                <p class="mt-2 text-slate-600">To become proficient in using the Power Query Editor to clean, transform, and shape data by applying various steps.</p>
+                                <ul class="mt-4 list-disc list-inside text-slate-600 space-y-1">
+                                    <li><b>Applied Steps:</b> A list of every transformation you apply. You can go back, modify, or delete steps. This is the core of Power Query's power.</li>
+                                    <li><b>Data Profiling:</b> Using tools on the <b>View</b> tab like Column Quality and Column Profile to understand your data's health before transforming it.</li>
+                                    <li><b>Transform vs. Add Column:</b> The <b>Transform</b> tab modifies an existing column, while the <b>Add Column</b> tab creates a new one.</li>
+                                </ul>
+                            </div>
+                        </div>
+                         <div class="mt-6">
+                            <button class="gemini-btn scenario-btn w-full justify-center">✨ Generate a Practice Scenario</button>
+                            <div class="scenario-output mt-4"></div>
+                        </div>
+                    </section>
+                    
+                    <!-- Chapter 3: Project 2 Data Import -->
+                    <section id="chapter-3" class="space-y-6">
+                        <h2 class="text-3xl font-bold text-slate-900 border-b pb-2">Chapter 3: Data Modeling & Star Schema</h2>
+                        <div class="bg-white p-6 rounded-xl shadow-md">
+                             <div class="flex justify-between items-start">
+                                <h3 class="text-xl font-semibold text-slate-800">What is a Star Schema?</h3>
+                                <button class="gemini-btn explain-btn text-xs">✨ Explain It</button>
+                            </div>
+                            <div class="concept-text">
+                                <p class="mt-2 text-slate-600">A star schema organizes data into a central <b>Fact Table</b> containing measurements (like job postings) and surrounding <b>Dimension Tables</b> containing descriptions (like companies, skills, dates). This model is efficient and enables complex analysis that flat tables cannot handle, such as analyzing multiple skills for a single job.</p>
+                            </div>
+                            <div class="mt-4 p-4 border border-slate-200 rounded-lg">
+                                <div class="text-center font-semibold mb-4">Star Schema Diagram</div>
+                                <div class="flex justify-center items-center">
+                                    <div class="text-center">
+                                        <div class="p-3 bg-amber-100 border-2 border-amber-400 rounded-lg shadow">skills_dim</div>
+                                        <div class="w-px h-8 bg-slate-400 mx-auto"></div>
+                                        <div class="p-3 bg-sky-100 border-2 border-sky-400 rounded-lg shadow">skills_job_dim</div>
+                                    </div>
+                                    <div class="h-px w-8 bg-slate-400"></div>
+                                    <div class="p-6 bg-rose-100 border-2 border-rose-400 rounded-lg text-center shadow font-bold">job_postings_fact</div>
+                                    <div class="h-px w-8 bg-slate-400"></div>
+                                    <div class="p-3 bg-emerald-100 border-2 border-emerald-400 rounded-lg shadow">company_dim</div>
+                                </div>
+                                <p class="text-center text-sm text-slate-500 mt-4">The central Fact table connects to multiple Dimension tables.</p>
+                            </div>
+                        </div>
+                         <div class="mt-6">
+                            <button class="gemini-btn scenario-btn w-full justify-center">✨ Generate a Practice Scenario</button>
+                            <div class="scenario-output mt-4"></div>
+                        </div>
+                    </section>
+
+                    <!-- Chapter 4: Advanced Transformations -->
+                    <section id="chapter-4" class="space-y-6">
+                        <h2 class="text-3xl font-bold text-slate-900 border-b pb-2">Chapter 4: Advanced Transformations</h2>
+                         <div class="bg-white p-6 rounded-xl shadow-md">
+                            <h3 class="text-xl font-semibold text-slate-800">Objective & Key Concepts</h3>
+                            <p class="mt-2 text-slate-600">Apply more complex data cleaning techniques, including splitting columns into rows and using conditional columns to create new, structured data.</p>
+                             <ul class="mt-4 list-disc list-inside text-slate-600 space-y-1">
+                                <li><b>Split Column by Delimiter:</b> Break a single column into multiple rows based on a character like a comma. Perfect for handling multi-value cells (e.g., "Full-time, Contractor").</li>
+                                <li><b>Conditional Column:</b> Create a new column based on `if-then-else` logic, allowing you to clean up data programmatically (e.g., properly capitalizing "SQL" and "Power BI").</li>
+                            </ul>
+                        </div>
+                        <div class="mt-6">
+                            <button class="gemini-btn scenario-btn w-full justify-center">✨ Generate a Practice Scenario</button>
+                            <div class="scenario-output mt-4"></div>
+                        </div>
+                    </section>
+
+                    <!-- Chapter 5: Append Vs. Merge -->
+                    <section id="chapter-5" class="space-y-6">
+                        <h2 class="text-3xl font-bold text-slate-900 border-b pb-2">Chapter 5: Append vs. Merge</h2>
+                         <div class="bg-white p-6 rounded-xl shadow-md">
+                            <h3 class="text-xl font-semibold text-slate-800">Objective: Combining Queries</h3>
+                            <p class="mt-2 text-slate-600">Understand the two fundamental ways to combine tables: appending (stacking) and merging (joining).</p>
+                             <div class="grid md:grid-cols-2 gap-6 mt-4">
+                                <div class="p-4 border border-slate-200 rounded-lg">
+                                    <h4 class="font-semibold text-lg">Append</h4>
+                                    <p class="text-slate-600 mt-1">Stacks tables on top of each other. The tables must have the same column structure. This increases the number of <b>rows</b>.</p>
+                                </div>
+                                 <div class="p-4 border border-slate-200 rounded-lg">
+                                    <h4 class="font-semibold text-lg">Merge</h4>
+                                    <p class="text-slate-600 mt-1">Joins tables side-by-side based on a matching key column. This is like a VLOOKUP or a SQL JOIN. This increases the number of <b>columns</b>.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-6">
+                            <button class="gemini-btn scenario-btn w-full justify-center">✨ Generate a Practice Scenario</button>
+                            <div class="scenario-output mt-4"></div>
+                        </div>
+                    </section>
+
+                    <!-- Chapter 6: M Language -->
+                    <section id="chapter-6" class="space-y-6">
+                        <h2 class="text-3xl font-bold text-slate-900 border-b pb-2">Chapter 6: M Language</h2>
+                         <div class="bg-white p-6 rounded-xl shadow-md">
+                            <h3 class="text-xl font-semibold text-slate-800">Objective: The Code Behind Power Query</h3>
+                            <p class="mt-2 text-slate-600">Gain a basic understanding of M Language and learn how to use "Column From Examples" to auto-generate code.</p>
+                             <p class="mt-4 text-slate-600"><b>Column From Examples</b> is a powerful feature on the "Add Column" tab. You simply type the desired output, and Power Query writes the M Language formula for you. Always check the generated formula to ensure it's correct!</p>
+                        </div>
+                        <div class="mt-6">
+                            <button class="gemini-btn scenario-btn w-full justify-center">✨ Generate a Practice Scenario</button>
+                            <div class="scenario-output mt-4"></div>
+                        </div>
+                    </section>
+
+                    <!-- Chapter 7: DAX Intro -->
+                    <section id="chapter-7" class="space-y-6">
+                        <h2 class="text-3xl font-bold text-slate-900 border-b pb-2">Chapter 7: DAX Intro</h2>
+                        <div class="bg-white p-6 rounded-xl shadow-md">
+                             <div class="flex justify-between items-start">
+                                <h3 class="text-xl font-semibold text-slate-800">DAX vs. M Language: The Golden Rule</h3>
+                                <button class="gemini-btn explain-btn text-xs">✨ Explain It</button>
+                            </div>
+                            <div class="concept-text">
+                                 <div class="grid md:grid-cols-2 gap-6 mt-4">
+                                    <div class="p-4 bg-slate-100 rounded-lg">
+                                        <h4 class="font-semibold text-lg">M Language (Power Query)</h4>
+                                        <p class="text-slate-600 mt-1">Used for <b>Data Preparation</b>. It runs first to extract, transform, and load the data into your model. Think of it as the kitchen where you prep the ingredients.</p>
+                                    </div>
+                                     <div class="p-4 bg-sky-100 rounded-lg">
+                                        <h4 class="font-semibold text-lg">DAX (Data Analysis Expressions)</h4>
+                                        <p class="text-slate-600 mt-1">Used for <b>Analysis and Calculations</b> on data that is already loaded. Think of it as the recipe you use to combine the prepped ingredients into a final dish.</p>
+                                    </div>
+                                </div>
+                                <p class="mt-4 font-medium text-slate-700">General Recommendation: Do as much transformation as possible in Power Query (M). Use DAX primarily for creating powerful, dynamic aggregations called <b>Measures</b>.</p>
+                            </div>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl shadow-md">
+                            <h3 class="text-xl font-semibold text-slate-800">DAX Example: Creating a Calculated Date Table</h3>
+                            <p class="mt-2 text-slate-600">A common and critical use of DAX is to create a dynamic date table for time intelligence calculations. This is typically done as a Calculated Table.</p>
+                            <div class="code-block mt-4">
+                                <button class="copy-btn">Copy</button>
+                                <code>
+Date Dim = 
+ADDCOLUMNS (
+    CALENDARAUTO(),
+    "Year", YEAR ( [Date] ),
+    "Month Name", FORMAT ( [Date], "mmmm" ),
+    "Weekday Name", FORMAT ( [Date], "dddd" )
+)
+                                </code>
+                            </div>
+                            <p class="text-sm text-slate-500 mt-2">`CALENDARAUTO()` finds all dates in your model and creates a date column. `ADDCOLUMNS()` then adds useful columns like Year and Month Name.</p>
+                        </div>
+                         <div class="mt-6">
+                            <button class="gemini-btn scenario-btn w-full justify-center">✨ Generate a Practice Scenario</button>
+                            <div class="scenario-output mt-4"></div>
+                        </div>
+                    </section>
+                    
+                    <!-- Chapter 8: Explicit Measures -->
+                    <section id="chapter-8" class="space-y-6">
+                        <h2 class="text-3xl font-bold text-slate-900 border-b pb-2">Chapter 8: Explicit Measures</h2>
+                        <div class="bg-white p-6 rounded-xl shadow-md">
+                             <div class="flex justify-between items-start">
+                                <h3 class="text-xl font-semibold text-slate-800">The Superpower of DAX: CALCULATE()</h3>
+                                <button class="gemini-btn explain-btn text-xs">✨ Explain It</button>
+                            </div>
+                            <div class="concept-text">
+                                <p class="mt-2 text-slate-600">Measures are formulas that calculate an aggregated value (like a sum or average). They are calculated on-the-fly based on the context of your visual (e.g., filters, slicers). This is the most efficient and powerful way to perform analysis in Power BI.</p>
+                                 <p class="mt-4 text-slate-600">The most important function is <b>CALCULATE()</b>, which allows you to modify the "filter context" of a calculation. This lets you do advanced analysis like calculating percentages of totals or values for a specific category regardless of user selections.</p>
+                            </div>
+                            <div class="code-block mt-4">
+                                <button class="copy-btn">Copy</button>
+                                <code>
+Job Percent = 
+DIVIDE(
+    [Job Count],
+    CALCULATE(
+        [Job Count],
+        ALLSELECTED('skills_dim')
+    )
+)
+                                </code>
+                            </div>
+                             <p class="text-sm text-slate-500 mt-2">This DAX formula calculates the percentage of total jobs for a given skill, correctly adjusting for any active filters.</p>
+                        </div>
+                         <div class="mt-6">
+                            <button class="gemini-btn scenario-btn w-full justify-center">✨ Generate a Practice Scenario</button>
+                            <div class="scenario-output mt-4"></div>
+                        </div>
+                    </section>
+                    
+                    <!-- Chapter 9: Parameters -->
+                    <section id="chapter-9" class="space-y-6">
+                        <h2 class="text-3xl font-bold text-slate-900 border-b pb-2">Chapter 9: Parameters</h2>
+                        <div class="bg-white p-6 rounded-xl shadow-md">
+                            <h3 class="text-xl font-semibold text-slate-800">Objective: Making Reports Interactive</h3>
+                            <p class="mt-2 text-slate-600">Parameters allow end-users to dynamically change what they see in a report without needing to edit the visuals themselves.</p>
+                            <div class="grid md:grid-cols-2 gap-6 mt-4">
+                                <div class="p-4 border border-slate-200 rounded-lg">
+                                    <h4 class="font-semibold text-lg">Field Parameters</h4>
+                                    <p class="text-slate-600 mt-1">Lets users change the columns or measures in a visual. For example, a single slicer could switch a chart from showing 'Salary by Country' to 'Salary by Company'.</p>
+                                </div>
+                                 <div class="p-4 border border-slate-200 rounded-lg">
+                                    <h4 class="font-semibold text-lg">Numeric Range Parameters</h4>
+                                    <p class="text-slate-600 mt-1">Creates a slider that users can adjust to perform "what-if" analysis, like seeing how different tax rates affect take-home pay.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl shadow-md">
+                            <h3 class="text-xl font-semibold text-slate-800">DAX Example: Using a Numeric Parameter</h3>
+                            <p class="mt-2 text-slate-600">After creating a Numeric Range Parameter called 'Select Deduction Rate', you use its generated measure in a DAX formula to perform a what-if calculation.</p>
+                            <div class="code-block mt-4">
+                                <button class="copy-btn">Copy</button>
+                                <code>
+Median Yearly Take-Home Pay =
+[Median Yearly Salary] * (1 - [Select Deduction Rate Value])
+                                </code>
+                            </div>
+                            <p class="text-sm text-slate-500 mt-2">This measure calculates the take-home pay by dynamically applying the deduction rate selected by the user in the slicer.</p>
+                        </div>
+                         <div class="mt-6">
+                            <button class="gemini-btn scenario-btn w-full justify-center">✨ Generate a Practice Scenario</button>
+                            <div class="scenario-output mt-4"></div>
+                        </div>
+                    </section>
+
+                    <!-- Chapter 10: Dashboard Build -->
+                    <section id="chapter-10" class="space-y-6">
+                        <h2 class="text-3xl font-bold text-slate-900 border-b pb-2">Chapter 10: Dashboard Build</h2>
+                        <div class="bg-white p-6 rounded-xl shadow-md">
+                            <h3 class="text-xl font-semibold text-slate-800">Objective: Bringing It All Together</h3>
+                            <p class="mt-2 text-slate-600">Apply all learned concepts to build a polished, final dashboard, focusing on design, layout, and user experience.</p>
+                            <ul class="mt-4 list-disc list-inside text-slate-600 space-y-1">
+                                <li><b>Layout:</b> Structure your report logically with titles, KPIs, and slicers at the top, and detailed charts below.</li>
+                                <li><b>Theme:</b> Use a consistent and visually appealing theme (e.g., dark mode) to enhance readability.</li>
+                                <li><b>Interactivity:</b> Use parameters and slicers to allow users to explore the data on their own terms.</li>
+                            </ul>
+                        </div>
+                    </section>
+
+                    <!-- Chapter 11: Share Dashboard -->
+                    <section id="chapter-11" class="space-y-6">
+                        <h2 class="text-3xl font-bold text-slate-900 border-b pb-2">Chapter 11: Share Dashboard</h2>
+                        <div class="bg-white p-6 rounded-xl shadow-md">
+                            <h3 class="text-xl font-semibold text-slate-800">Objective: From Desktop to the World</h3>
+                            <p class="mt-2 text-slate-600">Understand the best practices for sharing your completed dashboard with others.</p>
+                             <ul class="mt-4 list-disc list-inside text-slate-600 space-y-1">
+                                <li><b>Publish to Service:</b> Use the 'Publish' button on the Home tab to upload your report to the Power BI Service (the cloud platform).</li>
+                                <li><b>Share Publicly:</b> In the Power BI Service, use <b>File > Embed report > Publish to web (public)</b> to generate a link that anyone can view. Perfect for portfolios.</li>
+                                <li><b>Document Your Work:</b> Create a `README.md` file in a GitHub repository to explain your project, showcase screenshots, and link to the interactive report.</li>
+                            </ul>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal for Gemini Responses -->
+    <div id="gemini-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 id="modal-title" class="text-2xl font-bold text-slate-900 mb-4"></h3>
+            <div id="modal-body"></div>
+            <button id="modal-close-btn" class="mt-6 w-full bg-amber-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-amber-600 transition-colors">Close</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const sections = document.querySelectorAll('#content-sections section');
+            const nav = document.getElementById('sidebar-nav');
+            const navList = nav.querySelector('ul');
+            
+            if (!sections.length || !navList) return;
+
+            const chapterTitles = [];
+            sections.forEach(section => {
+                const chapterId = section.id;
+                const chapterTitle = section.querySelector('h2').textContent;
+                chapterTitles.push(chapterTitle);
+                const listItem = document.createElement('li');
+                const link = document.createElement('a');
+                link.href = `#${chapterId}`;
+                link.textContent = chapterTitle;
+                link.className = 'block px-4 py-2 rounded-md font-medium text-slate-600 hover:bg-slate-100 transition-colors';
+                link.dataset.navId = chapterId;
+                listItem.appendChild(link);
+                navList.appendChild(listItem);
+            });
+            
+            const navLinks = nav.querySelectorAll('a');
+
+            const observer = new IntersectionObserver(entries => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const id = entry.target.id;
+                        navLinks.forEach(link => {
+                            link.classList.remove('active-nav');
+                            if (link.dataset.navId === id) {
+                                link.classList.add('active-nav');
+                            }
+                        });
+                    }
+                });
+            }, { rootMargin: '-40% 0px -60% 0px' });
+
+            sections.forEach(section => observer.observe(section));
+            
+            const ctx = document.getElementById('courseOverviewChart');
+            if(ctx) {
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Power Query', 'Data Modeling', 'DAX', 'Dashboarding & Sharing'],
+                        datasets: [{
+                            label: 'Course Modules',
+                            data: [6, 1, 3, 2],
+                            backgroundColor: [
+                                'rgba(59, 130, 246, 0.7)',
+                                'rgba(239, 68, 68, 0.7)',
+                                'rgba(245, 158, 11, 0.7)',
+                                'rgba(16, 185, 129, 0.7)'
+                            ],
+                            borderColor: [
+                                'rgba(59, 130, 246, 1)',
+                                'rgba(239, 68, 68, 1)',
+                                'rgba(245, 158, 11, 1)',
+                                'rgba(16, 185, 129, 1)'
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    font: {
+                                        family: 'Inter',
+                                        size: 14
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            const copyButtons = document.querySelectorAll('.copy-btn');
+            copyButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const codeBlock = button.nextElementSibling;
+                    const codeText = codeBlock.innerText;
+                    navigator.clipboard.writeText(codeText).then(() => {
+                        button.textContent = 'Copied!';
+                        setTimeout(() => {
+                            button.textContent = 'Copy';
+                        }, 2000);
+                    }).catch(err => {
+                        console.error('Failed to copy text: ', err);
+                    });
+                });
+            });
+
+            // Gemini API Integration
+            const modal = document.getElementById('gemini-modal');
+            const modalTitle = document.getElementById('modal-title');
+            const modalBody = document.getElementById('modal-body');
+            const modalCloseBtn = document.getElementById('modal-close-btn');
+
+            const showModal = (title, content) => {
+                modalTitle.textContent = title;
+                modalBody.innerHTML = content;
+                modal.classList.add('visible');
+            };
+
+            const hideModal = () => {
+                modal.classList.remove('visible');
+            };
+
+            modalCloseBtn.addEventListener('click', hideModal);
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    hideModal();
+                }
+            });
+
+            async function callGemini(prompt) {
+                // Paste your API key here
+                const apiKey = ""; 
+                
+                if (!apiKey) {
+                    showModal("API Key Required", "Please add your Gemini API key to the script to use this feature.");
+                    return null;
+                }
+
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+                
+                let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
+                const payload = { contents: chatHistory };
+
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`API request failed with status ${response.status}. Please check if your API key is valid.`);
+                    }
+
+                    const result = await response.json();
+                    if (result.candidates && result.candidates.length > 0 &&
+                        result.candidates[0].content && result.candidates[0].content.parts &&
+                        result.candidates[0].content.parts.length > 0) {
+                        return result.candidates[0].content.parts[0].text;
+                    } else {
+                        throw new Error("Invalid API response structure");
+                    }
+                } catch (error) {
+                    console.error("Gemini API call failed:", error);
+                    return `Sorry, I couldn't fetch a response. ${error.message}`;
+                }
+            }
+
+            document.querySelectorAll('.explain-btn').forEach(button => {
+                button.addEventListener('click', async (e) => {
+                    const conceptCard = e.target.closest('.bg-white');
+                    const conceptTitle = conceptCard.querySelector('h3').textContent;
+                    const conceptText = conceptCard.querySelector('.concept-text').innerText;
+                    
+                    showModal(`Explaining: ${conceptTitle}`, '<div class="flex justify-center items-center"><div class="loader"></div></div>');
+
+                    const prompt = `Explain the following concept to me like I'm 5 years old, in one or two simple sentences. Be friendly and encouraging. Concept: "${conceptTitle} - ${conceptText}"`;
+                    const explanation = await callGemini(prompt);
+                    
+                    if (explanation) {
+                        showModal(`✨ ${conceptTitle}`, `<p class="text-slate-700 text-lg">${explanation}</p>`);
+                    } else {
+                        hideModal(); 
+                    }
+                });
+            });
+
+            document.querySelectorAll('.scenario-btn').forEach(button => {
+                button.addEventListener('click', async (e) => {
+                    const section = e.target.closest('section');
+                    const chapterTitle = section.querySelector('h2').textContent;
+                    const outputDiv = section.querySelector('.scenario-output');
+                    
+                    outputDiv.innerHTML = '<div class="flex justify-center items-center p-6"><div class="loader"></div></div>';
+
+                    const prompt = `Based on the Power BI topic of '${chapterTitle}', generate a short, one-paragraph real-world data problem or scenario that a data analyst might face. The scenario should require applying the concepts from this topic to solve it. Do not provide the solution. Make the scenario engaging.`;
+                    const scenario = await callGemini(prompt);
+
+                    if (scenario) {
+                        outputDiv.innerHTML = `
+                            <div class="bg-amber-50 p-6 rounded-xl border border-amber-200">
+                                <h4 class="font-semibold text-lg text-amber-900 mb-2">Your Practice Scenario</h4>
+                                <p class="text-amber-800">${scenario}</p>
+                            </div>
+                        `;
+                    } else {
+                        outputDiv.innerHTML = ''; 
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
